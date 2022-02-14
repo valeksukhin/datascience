@@ -1,0 +1,55 @@
+import numpy as np
+import pandas as pd
+import math
+from sklearn.metrics import make_scorer
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split, GridSearchCV
+from ml_metrics import rmsle
+from xgboost import XGBRegressor
+
+n_rows=1000000
+d_type={'Semana':np.uint8,'Agencia_ID':np.uint16,'Canal_ID':np.uint16,'Ruta_SAK':np.uint16,'Cliente_ID':np.uint32,'Producto_ID':np.uint16, 'Demanda_uni_equil':np.uint32}
+
+data_train = pd.read_csv("train.csv", usecols=d_type.keys(), dtype=d_type, nrows=n_rows)
+data_test = pd.read_csv("test.csv", nrows=n_rows)
+
+ids = data_test['id']
+data_test = data_test.drop(['id'],axis = 1)
+
+y = data_train['Demanda_uni_equil']
+x = data_train[data_test.columns.values]
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=50)
+pars = {'n_estimators':[100], 'max_depth':[4,8]}
+
+randf = GridSearchCV(RandomForestRegressor(), pars, scoring=make_scorer(rmsle, greater_is_better=False), n_jobs=-1)
+randf.fit(x_train, y_train)
+
+randf.best_estimator_
+pr=randf.predict(x_test) 
+rmsle(y_test, pr)
+
+n_rows=2000000
+d_type={'Semana':np.uint8,'Agencia_ID':np.uint16,'Canal_ID':np.uint16,'Ruta_SAK':np.uint16,'Cliente_ID':np.uint32,'Producto_ID':np.uint16, 'Demanda_uni_equil':np.uint32}
+
+data_train = pd.read_csv("train.csv", usecols=d_type.keys(), dtype=d_type, nrows=n_rows)
+data_test = pd.read_csv("test.csv", nrows=n_rows)
+
+ids = data_test['id']
+data_test = data_test.drop(['id'],axis = 1)
+
+y = data_train['Demanda_uni_equil']
+x = data_train[data_test.columns.values]
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=50)
+pars = {'n_estimators':[100, 200], 'max_depth':[4,8], 'learning_rate':[0.05, 0.1], 'colsample_bytree':[0.6, 0.9], 'subsample':[0.4, 0.8]}
+
+xgbd=GridSearchCV(XGBRegressor(), pars, scoring=make_scorer(rmsle, greater_is_better=False), n_jobs=-1)
+xgbd.fit(x_train, y_train)
+
+xgbd.best_estimator_
+xgb=XGBRegressor(n_estimators=100, max_depth=4, learning_rate=0.05, colsample_bytree=0.6, subsample=0.4)
+xgb.fit(x_train, y_train)
+
+pr=xgb.predict(x_test) 
+rmsle(y_test, pr)
